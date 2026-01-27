@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Our Watchlist">
+    <title>Our Watchlist</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: linear-gradient(to bottom right, #f1f5f9, #dbeafe, #ccfbf1); min-height: 100vh; color: #1f2937; }
+        .header { background: linear-gradient(to right, #1e3a8a, #0f766e, #1e3a8a); color: white; padding: 2rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); position: relative; overflow: hidden; }
+        .header::before { content: ''; position: absolute; inset: 0; opacity: 0.1; background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.1) 10px, rgba(255,255,255,.1) 20px); }
+        .header-content { position: relative; z-index: 10; display: flex; align-items: center; gap: 1rem; }
+        .header-emoji { font-size: 3rem; }
+        .header h1 { font-size: 2.25rem; font-weight: bold; }
+        .header p { color: #99f6e4; margin-top: 0.25rem; font-size: 1.125rem; }
+        .container { max-width: 1536px; margin: 0 auto; padding: 1rem; }
+        .controls { background: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 1.5rem; }
+        .controls-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .btn-add { padding: 0.5rem 1rem; background: linear-gradient(to right, #14b8a6, #0d9488); color: white; border: none; border-radius: 0.5rem; font-weight: bold; font-size: 1.25rem; cursor: pointer; }
+        .btn-toggle { padding: 0.5rem 1rem; background: white; color: #374151; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+        .btn-toggle.active { background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; }
+        select { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; }
+        .search-box { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: none; }
+        .search-input { width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; }
+        .filter-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: none; }
+        .filter-selects { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-selects select { flex: 1; min-width: 150px; font-size: 0.875rem; }
+        .genre-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        .genre-btn { padding: 0.25rem 0.75rem; border: none; border-radius: 9999px; font-size: 0.875rem; cursor: pointer; background: #f3f4f6; color: #374151; }
+        .genre-btn.active { background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; }
+        .btn-clear { padding: 0.5rem 1.5rem; background: linear-gradient(to right, #ef4444, #f97316); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .table-container { background: white; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); overflow-x: auto; margin-bottom: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        thead { background: linear-gradient(to right, #1e3a8a, #0f766e, #1e3a8a); color: white; }
+        th { padding: 0.5rem 0.5rem; text-align: left; font-weight: 600; }
+        td { padding: 0.5rem 0.5rem; border-bottom: 1px solid #e5e7eb; }
+        tbody tr:hover { background: #f9fafb; }
+        .title-cell { font-weight: 500; color: #111827; cursor: pointer; }
+        .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; }
+        .status-watched { background: #d1fae5; color: #065f46; }
+        .status-watching { background: #fed7aa; color: #9a3412; }
+        .status-want { background: #dbeafe; color: #1e40af; }
+        .btn-delete { padding: 0.25rem 0.5rem; border: none; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 500; cursor: pointer; background: #fee2e2; color: #b91c1c; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .stat-card { background: white; padding: 1rem; border-radius: 0.5rem; }
+        .stat-card.teal { border-top: 4px solid #14b8a6; }
+        .stat-card.blue { border-top: 4px solid #1e3a8a; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; }
+        .stat-value.teal { color: #0d9488; }
+        .stat-value.blue { color: #1e3a8a; }
+        .stat-label { color: #6b7280; font-size: 0.875rem; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 999; overflow-y: auto; }
+        .modal.show { display: block; }
+        .modal-content { background: white; border-radius: 0.5rem; max-width: 500px; margin: 2rem auto; padding: 1.5rem; }
+        .modal h2 { margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-input { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; }
+        textarea.form-input { font-family: inherit; resize: vertical; }
+        .button-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .button-group button { flex: 1; padding: 0.5rem; border: none; border-radius: 0.5rem; cursor: pointer; }
+        .btn-type { background: #f3f4f6; color: #374151; }
+        .btn-type.active { background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; }
+        .btn-status { background: #f3f4f6; }
+        .btn-status.active.watched { background: #16a34a; color: white; }
+        .btn-status.active.watching { background: #ea580c; color: white; }
+        .btn-status.active.want { background: #2563eb; color: white; }
+        .stars { display: flex; gap: 0.25rem; margin: 0.5rem 0; }
+        .star { cursor: pointer; color: #d1d5db; font-size: 2rem; }
+        .star.filled { color: #fbbf24; }
+        .tag-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .tag-btn { padding: 0.25rem 0.75rem; border: none; border-radius: 9999px; font-size: 0.875rem; cursor: pointer; background: #f3f4f6; }
+        .tag-btn.active.genre { background: linear-gradient(to right, #9333ea, #db2777); color: white; }
+        .tag-btn.active.service { background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; }
+        .form-buttons { display: flex; gap: 0.75rem; margin-top: 1rem; }
+        .btn-save { flex: 1; padding: 0.75rem; background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .btn-cancel { padding: 0.75rem 1rem; background: #f3f4f6; color: #374151; border: none; border-radius: 0.5rem; cursor: pointer; }
+        .confirm-modal .modal-content { max-width: 350px; }
+        .confirm-buttons { display: flex; gap: 0.75rem; margin-top: 1rem; }
+        .btn-confirm-delete { flex: 1; padding: 0.5rem; background: #dc2626; color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .btn-confirm-cancel { flex: 1; padding: 0.5rem; background: #e5e7eb; color: #374151; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+        .empty-state { background: white; padding: 3rem; border-radius: 0.5rem; text-align: center; color: #6b7280; }
+        .form-label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+        @media (max-width: 768px) { .header h1 { font-size: 1.5rem; } table { font-size: 0.7rem; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-emoji">🎬</div>
+            <div>
+                <h1>Our Watchlist</h1>
+                <p>The ultimate movie & TV collection</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="controls-row">
+                <button class="btn-add" onclick="openAddModal()">+</button>
+                <button class="btn-toggle" id="searchBtn" onclick="toggleSearch()"><span>🔍</span></button>
+                <button class="btn-toggle" id="filterBtn" onclick="toggleFilters()"><span>⚙️</span><span id="filterCount"></span></button>
+                <select id="sortSelect" onchange="updateSort()">
+                    <option value="dateAdded-desc">Newest</option>
+                    <option value="dateAdded-asc">Oldest</option>
+                    <option value="title-asc">Title A-Z</option>
+                    <option value="title-desc">Title Z-A</option>
+                </select>
+            </div>
+            <div id="searchBox" class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="renderTable()">
+            </div>
+            <div id="filterPanel" class="filter-panel">
+                <div class="filter-selects">
+                    <select id="statusFilter" onchange="updateFilters()">
+                        <option value="all">All Status</option>
+                        <option value="want-to-watch">Want to Watch</option>
+                        <option value="currently-watching">Currently Watching</option>
+                        <option value="watched">Watched</option>
+                    </select>
+                    <select id="typeFilter" onchange="updateFilters()">
+                        <option value="all">All Types</option>
+                        <option value="movie">Movies</option>
+                        <option value="tv">TV Shows</option>
+                    </select>
+                    <select id="audienceFilter" onchange="updateFilters()">
+                        <option value="all">All Audience</option>
+                        <option value="me">Just Me</option>
+                        <option value="both">For Both</option>
+                    </select>
+                    <select id="serviceFilter" onchange="updateFilters()"><option value="all">All Services</option></select>
+                </div>
+                <div class="genre-buttons" id="genreButtons"></div>
+                <div style="text-align: center;">
+                    <button class="btn-clear" onclick="clearFilters()">Clear All Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tableContainer"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card teal"><div class="stat-value teal" id="totalCount">0</div><div class="stat-label">Total</div></div>
+            <div class="stat-card blue"><div class="stat-value blue" id="watchedCount">0</div><div class="stat-label">Watched</div></div>
+            <div class="stat-card teal"><div class="stat-value teal" id="movieCount">0</div><div class="stat-label">Movies</div></div>
+            <div class="stat-card blue"><div class="stat-value blue" id="tvCount">0</div><div class="stat-label">TV Shows</div></div>
+        </div>
+    </div>
+
+    <div id="formModal" class="modal">
+        <div class="modal-content">
+            <h2 id="formTitle">Add New</h2>
+            <div class="form-group"><input type="text" id="titleInput" class="form-input" placeholder="Title *"></div>
+            <div class="button-group">
+                <button class="btn-type" id="movieBtn" onclick="setType('movie')">🎬 Movie</button>
+                <button class="btn-type" id="tvBtn" onclick="setType('tv')">📺 TV</button>
+            </div>
+            <div class="button-group">
+                <button class="btn-status" id="wantBtn" onclick="setStatus('want-to-watch')">Want</button>
+                <button class="btn-status" id="watchingBtn" onclick="setStatus('currently-watching')">Watching</button>
+                <button class="btn-status" id="watchedBtn" onclick="setStatus('watched')">Watched</button>
+            </div>
+            <div id="ratingSection" style="display: none;"><div class="stars" id="ratingStars"></div></div>
+            <div class="button-group">
+                <button class="btn-type" id="meBtn" onclick="toggleAudience('me')">Just Me</button>
+                <button class="btn-type" id="bothBtn" onclick="toggleAudience('both')">For Both</button>
+            </div>
+            <div class="form-group"><label class="form-label">Genres</label><div class="tag-group" id="genreTagsForm"></div></div>
+            <div class="form-group"><label class="form-label">Where to Watch</label><div class="tag-group" id="serviceTagsForm"></div></div>
+            <div class="form-group"><textarea id="notesInput" class="form-input" rows="3" placeholder="Notes..."></textarea></div>
+            <div class="form-buttons">
+                <button class="btn-save" onclick="saveItem()"><span id="saveButtonText">Add</span></button>
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal confirm-modal">
+        <div class="modal-content">
+            <h3>Delete Item?</h3>
+            <p>Delete "<span id="deleteItemTitle"></span>"?</p>
+            <div class="confirm-buttons">
+                <button class="btn-confirm-delete" onclick="confirmDelete()">Delete</button>
+                <button class="btn-confirm-cancel" onclick="cancelDelete()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+const PRELOADED = [{"id":1001,"title":"A Case for Kindness","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["NA"],"description":"About the need ...","audience":["both"],"rating":null,"dateAdded":"2025-01-01T12:00:00.000Z"},{"id":1002,"title":"A Privte Life","type":"movie","status":"want-to-watch","genres":["Drama"],"streamingServices":["NA"],"description":"Jodie Foster in...","audience":["both"],"rating":null,"dateAdded":"2025-01-02T12:00:00.000Z"},{"id":1003,"title":"Abbott Elementary","type":"tv","status":"currently-watching","genres":["Comedy","30 min."],"streamingServices":["Hulu"],"description":"Thursdays.","audience":["both"],"rating":null,"dateAdded":"2025-01-03T12:00:00.000Z"},{"id":1004,"title":"All Creatures Great and Small","type":"tv","status":"currently-watching","genres":["Drama","Romance"],"streamingServices":["PBS"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-04T12:00:00.000Z"},{"id":1005,"title":"Alone","type":"tv","status":"watched","genres":["Reality Show"],"streamingServices":["Amazon Prime","$"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-05T12:00:00.000Z"},{"id":1006,"title":"Alone Australia","type":"tv","status":"want-to-watch","genres":["Reality Show"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-06T12:00:00.000Z"},{"id":1007,"title":"Back to Black","type":"movie","status":"want-to-watch","genres":["British","Drama"],"streamingServices":["$4"],"description":"Amy Winehouse, ...","audience":["both"],"rating":null,"dateAdded":"2025-01-07T12:00:00.000Z"},{"id":1008,"title":"Between the Mountain and the Sky","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["NA"],"description":"Mother of 50 Ne...","audience":["both"],"rating":null,"dateAdded":"2025-01-08T12:00:00.000Z"},{"id":1009,"title":"Beyond Utopia","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$4"],"description":"Family rescued ...","audience":["both"],"rating":null,"dateAdded":"2025-01-09T12:00:00.000Z"},{"id":1010,"title":"Black Dove","type":"tv","status":"watched","genres":["Thriller/Suspense","Crime"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-10T12:00:00.000Z"},{"id":1011,"title":"Blink","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Disney+"],"description":"Siblings who ar...","audience":["both"],"rating":null,"dateAdded":"2025-01-11T12:00:00.000Z"},{"id":1012,"title":"Blue Moon","type":"movie","status":"want-to-watch","genres":["Drama","History"],"streamingServices":["$"],"description":"$15, Oscar","audience":["both"],"rating":null,"dateAdded":"2025-01-12T12:00:00.000Z"},{"id":1013,"title":"Bone Temple","type":"movie","status":"want-to-watch","genres":["Action","Thriller/Suspense"],"streamingServices":["$"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-01-13T12:00:00.000Z"},{"id":1014,"title":"Born Into Brothels","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$4"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-14T12:00:00.000Z"},{"id":1015,"title":"Bridgerton","type":"tv","status":"currently-watching","genres":["Drama","British"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-15T12:00:00.000Z"},{"id":1016,"title":"Bugonia","type":"movie","status":"want-to-watch","genres":["Drama","Fantasy"],"streamingServices":["$"],"description":"$6, Oscars","audience":["me"],"rating":null,"dateAdded":"2025-01-16T12:00:00.000Z"},{"id":1017,"title":"Careme","type":"tv","status":"want-to-watch","genres":["Drama","Foreign"],"streamingServices":["Apple TV+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-17T12:00:00.000Z"},{"id":1018,"title":"Chad Powers","type":"tv","status":"want-to-watch","genres":["Comedy","30 min."],"streamingServices":["Hulu"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-18T12:00:00.000Z"},{"id":1019,"title":"Classified","type":"tv","status":"want-to-watch","genres":["Thriller/Suspense","Spy"],"streamingServices":["PBS"],"description":"French Canadian...","audience":["both"],"rating":null,"dateAdded":"2025-01-19T12:00:00.000Z"},{"id":1020,"title":"COBRA","type":"tv","status":"want-to-watch","genres":["Thriller/Suspense","Spy"],"streamingServices":["PBS"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-01-20T12:00:00.000Z"},{"id":1021,"title":"Come See Me in the Good Light","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Apple TV+"],"description":"About poet Andr...","audience":["me","both"],"rating":null,"dateAdded":"2025-01-21T12:00:00.000Z"},{"id":1022,"title":"Cover-Up","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":[],"description":"About Seymour H...","audience":["both"],"rating":null,"dateAdded":"2025-01-22T12:00:00.000Z"},{"id":1023,"title":"Dept. Q","type":"tv","status":"watched","genres":["Thriller/Suspense","Crime"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-23T12:00:00.000Z"},{"id":1024,"title":"Donnie Darko","type":"movie","status":"want-to-watch","genres":["Science Fiction","Horror"],"streamingServices":["Hulu"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-01-24T12:00:00.000Z"},{"id":1025,"title":"Drops of God","type":"tv","status":"want-to-watch","genres":["Drama","Foreign"],"streamingServices":["Apple TV+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-25T12:00:00.000Z"},{"id":1026,"title":"Eddington","type":"tv","status":"currently-watching","genres":["Drama","Action"],"streamingServices":["HBO Max"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-01-26T12:00:00.000Z"},{"id":1027,"title":"Eephus","type":"movie","status":"want-to-watch","genres":["Comedy","Drama"],"streamingServices":["$"],"description":"$6","audience":["both"],"rating":null,"dateAdded":"2025-01-27T12:00:00.000Z"},{"id":1028,"title":"Elio","type":"movie","status":"want-to-watch","genres":["Animation"],"streamingServices":["Disney+"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-01-28T12:00:00.000Z"},{"id":1029,"title":"Fire of Love","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Hulu"],"description":"Couple who love...","audience":["both"],"rating":null,"dateAdded":"2025-01-29T12:00:00.000Z"},{"id":1030,"title":"Folktales","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$4"],"description":"About Norwegian...","audience":["both"],"rating":null,"dateAdded":"2025-01-30T12:00:00.000Z"},{"id":1031,"title":"Frankenstein","type":"movie","status":"want-to-watch","genres":["Mystery","Horror"],"streamingServices":["Netflix"],"description":"Oscars","audience":["me"],"rating":null,"dateAdded":"2025-01-31T12:00:00.000Z"},{"id":1032,"title":"Girls 5Eva","type":"tv","status":"want-to-watch","genres":["Comedy","30 min."],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-01T12:00:00.000Z"},{"id":1033,"title":"Hamnet","type":"movie","status":"want-to-watch","genres":["Drama","British"],"streamingServices":["NA"],"description":"Oscars","audience":["both"],"rating":null,"dateAdded":"2025-02-02T12:00:00.000Z"},{"id":1034,"title":"Heat","type":"movie","status":"want-to-watch","genres":["Action","Crime"],"streamingServices":["Hulu"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-03T12:00:00.000Z"},{"id":1035,"title":"Hijack","type":"tv","status":"currently-watching","genres":["Thriller/Suspense","British"],"streamingServices":["Apple TV+"],"description":"Tuesdays.","audience":["both"],"rating":null,"dateAdded":"2025-02-04T12:00:00.000Z"},{"id":1036,"title":"His and Hers","type":"tv","status":"want-to-watch","genres":["Crime","Mystery"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-05T12:00:00.000Z"},{"id":1037,"title":"Hope Street","type":"tv","status":"want-to-watch","genres":["Crime","British"],"streamingServices":["Hulu"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-06T12:00:00.000Z"},{"id":1038,"title":"If I Had Legs I'd Kick You","type":"movie","status":"want-to-watch","genres":["Drama","Thriller/Suspense"],"streamingServices":["$"],"description":"$6, Oscars","audience":["both"],"rating":null,"dateAdded":"2025-02-07T12:00:00.000Z"},{"id":1039,"title":"Industry","type":"tv","status":"currently-watching","genres":["Drama","British"],"streamingServices":["HBO Max"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-08T12:00:00.000Z"},{"id":1040,"title":"It Was Just an Accident","type":"movie","status":"watched","genres":["Drama","Foreign"],"streamingServices":["$10"],"description":"Oscars","audience":["both"],"rating":null,"dateAdded":"2025-02-09T12:00:00.000Z"},{"id":1041,"title":"Italian Studies","type":"movie","status":"want-to-watch","genres":["Drama"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-10T12:00:00.000Z"},{"id":1042,"title":"Karen Pirie","type":"tv","status":"watched","genres":["Drama","Crime"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-11T12:00:00.000Z"},{"id":1043,"title":"Knight of the Seven","type":"tv","status":"want-to-watch","genres":["Fantasy","Drama"],"streamingServices":["HBO Max"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-02-12T12:00:00.000Z"},{"id":1044,"title":"KPop Demon Hunters","type":"movie","status":"want-to-watch","genres":["Animation"],"streamingServices":["Netflix"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-02-13T12:00:00.000Z"},{"id":1045,"title":"Laid","type":"tv","status":"want-to-watch","genres":["Comedy","30 min."],"streamingServices":["Peacock"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-14T12:00:00.000Z"},{"id":1046,"title":"Memory of a Killer","type":"tv","status":"want-to-watch","genres":["Thriller/Suspense","Crime"],"streamingServices":["YTTV"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-15T12:00:00.000Z"},{"id":1047,"title":"Motherland","type":"tv","status":"currently-watching","genres":["Comedy","British"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-16T12:00:00.000Z"},{"id":1048,"title":"Mr. Nobody Against Putin","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$"],"description":"$6","audience":["me","both"],"rating":null,"dateAdded":"2025-02-17T12:00:00.000Z"},{"id":1049,"title":"Nightsleeper","type":"tv","status":"want-to-watch","genres":["Action","Thriller/Suspense"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-18T12:00:00.000Z"},{"id":1050,"title":"Nobody Wants This","type":"tv","status":"watched","genres":["Comedy","30 min."],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-19T12:00:00.000Z"},{"id":1051,"title":"Offspring","type":"tv","status":"want-to-watch","genres":["Comedy","Drama"],"streamingServices":["Amazon Prime"],"description":"Australian.","audience":["both"],"rating":null,"dateAdded":"2025-02-20T12:00:00.000Z"},{"id":1052,"title":"Oh, Hi","type":"movie","status":"want-to-watch","genres":["Comedy","Romance"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-21T12:00:00.000Z"},{"id":1053,"title":"Pluribus","type":"tv","status":"watched","genres":["Science Fiction"],"streamingServices":["Apple TV+"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-02-22T12:00:00.000Z"},{"id":1054,"title":"Pride and Prejudice","type":"movie","status":"want-to-watch","genres":["Drama","Romance"],"streamingServices":["$4"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-23T12:00:00.000Z"},{"id":1055,"title":"Purnille","type":"tv","status":"watched","genres":["Comedy","30 min."],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-24T12:00:00.000Z"},{"id":1056,"title":"Rebuilding","type":"movie","status":"want-to-watch","genres":["Drama"],"streamingServices":["$"],"description":"Josh O'Connor.","audience":["both"],"rating":null,"dateAdded":"2025-02-25T12:00:00.000Z"},{"id":1057,"title":"Roofman","type":"movie","status":"want-to-watch","genres":["Crime","Romance"],"streamingServices":["$","Paramount+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-26T12:00:00.000Z"},{"id":1058,"title":"Safe","type":"tv","status":"want-to-watch","genres":["Crime","Thriller/Suspense"],"streamingServices":["Netflix"],"description":"Harlan Coben","audience":["both"],"rating":null,"dateAdded":"2025-02-27T12:00:00.000Z"},{"id":1059,"title":"Schitt's Creek","type":"tv","status":"currently-watching","genres":["Comedy","30 min."],"streamingServices":["Hulu"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-02-28T12:00:00.000Z"},{"id":1060,"title":"Taylor Swift behind the scenes","type":"tv","status":"want-to-watch","genres":["Reality Show"],"streamingServices":["Disney+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-01T12:00:00.000Z"},{"id":1061,"title":"Ted Lasso","type":"tv","status":"watched","genres":["Comedy","British"],"streamingServices":["Apple TV+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-02T12:00:00.000Z"},{"id":1062,"title":"The Alpinist","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$4"],"description":"Free solo climb...","audience":["both"],"rating":null,"dateAdded":"2025-03-03T12:00:00.000Z"},{"id":1063,"title":"The Biggest Little Farm","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["$4"],"description":"People start a ...","audience":["both"],"rating":null,"dateAdded":"2025-03-04T12:00:00.000Z"},{"id":1064,"title":"The Crystal Cuckoo","type":"tv","status":"currently-watching","genres":["Crime","Thriller/Suspense"],"streamingServices":["Netflix"],"description":"Norwegian?","audience":["both"],"rating":null,"dateAdded":"2025-03-05T12:00:00.000Z"},{"id":1065,"title":"The Day of the Jackal","type":"tv","status":"watched","genres":["Thriller/Suspense","Spy"],"streamingServices":["Peacock"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-06T12:00:00.000Z"},{"id":1066,"title":"The Diplomat","type":"tv","status":"watched","genres":["Drama","Thriller/Suspense"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-07T12:00:00.000Z"},{"id":1067,"title":"The Gilded Age","type":"tv","status":"watched","genres":["Drama","Romance"],"streamingServices":["HBO Max"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-08T12:00:00.000Z"},{"id":1068,"title":"The Great British Baking Show","type":"tv","status":"watched","genres":["Reality Show"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-09T12:00:00.000Z"},{"id":1069,"title":"The Last Frontier","type":"tv","status":"want-to-watch","genres":["Action","Thriller/Suspense"],"streamingServices":["Apple TV+"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-03-10T12:00:00.000Z"},{"id":1070,"title":"The Life of Chuck","type":"movie","status":"want-to-watch","genres":["Drama","British"],"streamingServices":["Hulu"],"description":"Tom Hiddlestone","audience":["me"],"rating":null,"dateAdded":"2025-03-11T12:00:00.000Z"},{"id":1071,"title":"The Little Drummer Girl","type":"tv","status":"want-to-watch","genres":["Thriller/Suspense","Spy"],"streamingServices":["$","Amazon Prime"],"description":"First episode f...","audience":["both"],"rating":null,"dateAdded":"2025-03-12T12:00:00.000Z"},{"id":1072,"title":"The Lowdown","type":"tv","status":"want-to-watch","genres":["Drama","Thriller/Suspense"],"streamingServices":["Hulu"],"description":"Ethan Hawke.","audience":["both"],"rating":null,"dateAdded":"2025-03-13T12:00:00.000Z"},{"id":1073,"title":"The Mastermind","type":"movie","status":"want-to-watch","genres":["Crime","Thriller/Suspense"],"streamingServices":["$"],"description":"$6, Josh O'Conn...","audience":["both"],"rating":null,"dateAdded":"2025-03-14T12:00:00.000Z"},{"id":1074,"title":"The Night Manager","type":"tv","status":"currently-watching","genres":["Thriller/Suspense","Spy"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-15T12:00:00.000Z"},{"id":1075,"title":"The Perfect Neighbor","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Netflix"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-03-16T12:00:00.000Z"},{"id":1076,"title":"The Pitt","type":"tv","status":"currently-watching","genres":["Drama"],"streamingServices":["HBO Max"],"description":"Thursdays","audience":["both"],"rating":null,"dateAdded":"2025-03-17T12:00:00.000Z"},{"id":1077,"title":"The Remarkable Life of Ibelin","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["NA"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-18T12:00:00.000Z"},{"id":1078,"title":"The Revolution","type":"tv","status":"currently-watching","genres":["Documentary"],"streamingServices":["PBS"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-19T12:00:00.000Z"},{"id":1079,"title":"The Rip","type":"movie","status":"watched","genres":["Thriller/Suspense"],"streamingServices":["Netflix"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-20T12:00:00.000Z"},{"id":1080,"title":"The Savant","type":"tv","status":"want-to-watch","genres":["Drama","Thriller/Suspense"],"streamingServices":["Hulu"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-21T12:00:00.000Z"},{"id":1081,"title":"The Secret Agent","type":"movie","status":"want-to-watch","genres":["Drama","Thriller/Suspense"],"streamingServices":["NA"],"description":"Brazilian, Osca...","audience":["both"],"rating":null,"dateAdded":"2025-03-22T12:00:00.000Z"},{"id":1082,"title":"The Stringer","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Netflix"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-03-23T12:00:00.000Z"},{"id":1083,"title":"The Studio","type":"tv","status":"want-to-watch","genres":["Comedy"],"streamingServices":["Apple TV+"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-03-24T12:00:00.000Z"},{"id":1084,"title":"The Testament of Ann Lee","type":"movie","status":"want-to-watch","genres":["Drama"],"streamingServices":["NA"],"description":"Oscars","audience":["both"],"rating":null,"dateAdded":"2025-03-25T12:00:00.000Z"},{"id":1085,"title":"The Woman in the Wall","type":"tv","status":"want-to-watch","genres":["Thriller/Suspense","Crime"],"streamingServices":["Paramount+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-26T12:00:00.000Z"},{"id":1086,"title":"Torn","type":"movie","status":"want-to-watch","genres":["Documentary"],"streamingServices":["Hulu"],"description":"About climber a...","audience":["both"],"rating":null,"dateAdded":"2025-03-27T12:00:00.000Z"},{"id":1087,"title":"Traitors","type":"tv","status":"want-to-watch","genres":["Reality Show"],"streamingServices":["Peacock"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-28T12:00:00.000Z"},{"id":1088,"title":"Trying","type":"tv","status":"want-to-watch","genres":["Comedy","British"],"streamingServices":["Apple TV+"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-29T12:00:00.000Z"},{"id":1089,"title":"Uncut Gems","type":"movie","status":"want-to-watch","genres":["Action","Thriller/Suspense"],"streamingServices":["HBO Max"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-30T12:00:00.000Z"},{"id":1090,"title":"Unforgotten","type":"tv","status":"watched","genres":["British","Crime"],"streamingServices":["PBS"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-03-31T12:00:00.000Z"},{"id":1091,"title":"While We're Young","type":"movie","status":"want-to-watch","genres":["Drama"],"streamingServices":["HBO Max"],"description":"","audience":["me"],"rating":null,"dateAdded":"2025-04-01T12:00:00.000Z"},{"id":1092,"title":"Wicked:For Good","type":"movie","status":"want-to-watch","genres":["Fantasy","Science Fiction"],"streamingServices":["$"],"description":"$20","audience":["me"],"rating":null,"dateAdded":"2025-04-02T12:00:00.000Z"},{"id":1093,"title":"Wild Cards","type":"movie","status":"want-to-watch","genres":["Comedy","Crime"],"streamingServices":["Amazon Prime"],"description":"","audience":["both"],"rating":null,"dateAdded":"2025-04-03T12:00:00.000Z"}];
+const GENRES = ['Action','Comedy','Drama','Thriller/Suspense','Horror','Science Fiction','Fantasy','Romance','Documentary','Crime','Mystery','Family/Kids','Animation','Adventure','Reality Show','British','Spy','History','30 min.','Foreign'];
+const SERVICES = ['Netflix','Hulu','Disney+','Amazon Prime','HBO Max','Apple TV+','Paramount+','Peacock','YouTube','PBS','YTTV','Other','NA','$','$4','$10'];
+
+let items = [];
+let editingId = null;
+let itemToDelete = null;
+let sortBy = 'dateAdded-desc';
+let filters = {status:'all',type:'all',audience:'all',genres:[],streamingService:'all'};
+let formData = {title:'',type:'movie',status:'want-to-watch',rating:null,audience:['both'],genres:[],streamingServices:[],description:''};
+
+function init() {
+    const saved = localStorage.getItem('watchlist_items');
+    if (!saved) {
+        items = PRELOADED;
+        localStorage.setItem('watchlist_items', JSON.stringify(items));
+    } else {
+        items = JSON.parse(saved);
+    }
+    initializeGenreButtons();
+    initializeFormTags();
+    initializeServiceFilter();
+    initializeRatingStars();
+    renderTable();
+}
+
+function initializeGenreButtons() {
+    const c = document.getElementById('genreButtons');
+    GENRES.forEach(g => {
+        const b = document.createElement('button');
+        b.className = 'genre-btn';
+        b.textContent = g;
+        b.onclick = () => toggleGenreFilter(g);
+        c.appendChild(b);
+    });
+}
+
+function initializeFormTags() {
+    const gc = document.getElementById('genreTagsForm');
+    const sc = document.getElementById('serviceTagsForm');
+    GENRES.forEach(g => {
+        const b = document.createElement('button');
+        b.className = 'tag-btn';
+        b.textContent = g;
+        b.type = 'button';
+        b.onclick = () => toggleFormTag('genres', g);
+        b.dataset.genre = g;
+        gc.appendChild(b);
+    });
+    SERVICES.forEach(s => {
+        const b = document.createElement('button');
+        b.className = 'tag-btn';
+        b.textContent = s;
+        b.type = 'button';
+        b.onclick = () => toggleFormTag('streamingServices', s);
+        b.dataset.service = s;
+        sc.appendChild(b);
+    });
+}
+
+function initializeServiceFilter() {
+    const s = document.getElementById('serviceFilter');
+    SERVICES.forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        s.appendChild(o);
+    });
+}
+
+function initializeRatingStars() {
+    const c = document.getElementById('ratingStars');
+    for (let i=1; i<=5; i++) {
+        const s = document.createElement('span');
+        s.className = 'star';
+        s.textContent = '★';
+        s.onclick = () => setRating(i);
+        c.appendChild(s);
+    }
+}
+
+function saveData() {
+    localStorage.setItem('watchlist_items', JSON.stringify(items));
+}
+
+function toggleSearch() {
+    const b = document.getElementById('searchBox');
+    const btn = document.getElementById('searchBtn');
+    const v = b.style.display !== 'none';
+    b.style.display = v ? 'none' : 'block';
+    btn.classList.toggle('active', !v);
+}
+
+function toggleFilters() {
+    const p = document.getElementById('filterPanel');
+    const btn = document.getElementById('filterBtn');
+    const v = p.style.display !== 'none';
+    p.style.display = v ? 'none' : 'block';
+    btn.classList.toggle('active', !v);
+}
+
+function toggleGenreFilter(g) {
+    const i = filters.genres.indexOf(g);
+    if (i > -1) filters.genres.splice(i, 1);
+    else filters.genres.push(g);
+    updateGenreButtonStates();
+    updateFilterCount();
+    renderTable();
+}
+
+function updateGenreButtonStates() {
+    document.querySelectorAll('.genre-btn').forEach(b => b.classList.toggle('active', filters.genres.includes(b.textContent)));
+}
+
+function updateFilters() {
+    filters.status = document.getElementById('statusFilter').value;
+    filters.type = document.getElementById('typeFilter').value;
+    filters.audience = document.getElementById('audienceFilter').value;
+    filters.streamingService = document.getElementById('serviceFilter').value;
+    updateFilterCount();
+    renderTable();
+}
+
+function updateFilterCount() {
+    let c = 0;
+    if (filters.status !== 'all') c++;
+    if (filters.type !== 'all') c++;
+    if (filters.audience !== 'all') c++;
+    if (filters.genres.length > 0) c++;
+    if (filters.streamingService !== 'all') c++;
+    document.getElementById('filterCount').textContent = c > 0 ? `(${c})` : '';
+}
+
+function clearFilters() {
+    filters = {status:'all',type:'all',audience:'all',genres:[],streamingService:'all'};
+    document.getElementById('statusFilter').value = 'all';
+    document.getElementById('typeFilter').value = 'all';
+    document.getElementById('audienceFilter').value = 'all';
+    document.getElementById('serviceFilter').value = 'all';
+    document.getElementById('searchInput').value = '';
+    updateGenreButtonStates();
+    updateFilterCount();
+    renderTable();
+}
+
+function updateSort() {
+    sortBy = document.getElementById('sortSelect').value;
+    renderTable();
+}
+
+function getFilteredAndSortedItems() {
+    let f = [...items];
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    if (q.trim()) f = f.filter(i => i.title.toLowerCase().includes(q) || (i.description && i.description.toLowerCase().includes(q)));
+    if (filters.status !== 'all') f = f.filter(i => i.status === filters.status);
+    if (filters.type !== 'all') f = f.filter(i => i.type === filters.type);
+    if (filters.audience !== 'all') f = f.filter(i => i.audience && i.audience.includes(filters.audience));
+    if (filters.genres.length > 0) f = f.filter(i => i.genres && filters.genres.some(g => i.genres.includes(g)));
+    if (filters.streamingService !== 'all') f = f.filter(i => i.streamingServices && i.streamingServices.includes(filters.streamingService));
+    const [field, dir] = sortBy.split('-');
+    f.sort((a,b) => {
+        let av, bv;
+        if (field === 'title') { av = a.title.toLowerCase(); bv = b.title.toLowerCase(); }
+        else { av = new Date(a.dateAdded).getTime(); bv = new Date(b.dateAdded).getTime(); }
+        return dir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+    return f;
+}
+
+function renderTable() {
+    const f = getFilteredAndSortedItems();
+    const c = document.getElementById('tableContainer');
+    if (f.length === 0) {
+        c.innerHTML = '<div class="empty-state"><p>No items</p></div>';
+    } else {
+        let h = '<div class="table-container"><table><thead><tr><th>Title</th><th>Type</th><th>Service</th><th>Status</th><th>Genres</th><th>Notes</th><th>Audience</th><th>Del</th></tr></thead><tbody>';
+        f.forEach(i => {
+            const sc = i.status === 'watched' ? 'status-watched' : i.status === 'currently-watching' ? 'status-watching' : 'status-want';
+            const st = i.status === 'watched' ? 'Watched' : i.status === 'currently-watching' ? 'Watching' : 'Want';
+            const ti = i.type === 'movie' ? '🎬' : '📺';
+            const sv = i.streamingServices && i.streamingServices.length > 0 ? i.streamingServices.slice(0,2).join(', ') + (i.streamingServices.length > 2 ? '...' : '') : '-';
+            const ge = i.genres && i.genres.length > 0 ? i.genres.slice(0,2).join(', ') + (i.genres.length > 2 ? '...' : '') : '-';
+            const no = i.description ? (i.description.length > 12 ? i.description.substring(0,12) + '...' : i.description) : '-';
+            const au = i.audience && i.audience.includes('me') && i.audience.includes('both') ? 'Me+Us' : i.audience && i.audience.includes('me') ? 'Me' : i.audience && i.audience.includes('both') ? 'Us' : '-';
+            h += `<tr><td class="title-cell" onclick="openEditModal(${i.id})">${i.title}</td><td>${ti}</td><td style="font-size:0.7rem;">${sv}</td><td><span class="status-badge ${sc}">${st}</span></td><td style="font-size:0.7rem;">${ge}</td><td style="font-size:0.7rem;color:#6b7280;">${no}</td><td>${au}</td><td><button class="btn-delete" onclick="event.stopPropagation(); openDeleteConfirm(${i.id})">Del</button></td></tr>`;
+        });
+        h += '</tbody></table></div>';
+        c.innerHTML = h;
+    }
+    updateStats(f.length);
+}
+
+function updateStats(fc) {
+    document.getElementById('totalCount').textContent = fc;
+    document.getElementById('watchedCount').textContent = items.filter(i => i.status === 'watched').length;
+    document.getElementById('movieCount').textContent = items.filter(i => i.type === 'movie').length;
+    document.getElementById('tvCount').textContent = items.filter(i => i.type === 'tv').length;
+}
+
+function openAddModal() {
+    editingId = null;
+    formData = {title:'',type:'movie',status:'want-to-watch',rating:null,audience:['both'],genres:[],streamingServices:[],description:''};
+    populateForm();
+    document.getElementById('formTitle').textContent = 'Add New';
+    document.getElementById('saveButtonText').textContent = 'Add';
+    document.getElementById('formModal').classList.add('show');
+}
+
+function openEditModal(id) {
+    editingId = id;
+    formData = {...items.find(i => i.id === id)};
+    populateForm();
+    document.getElementById('formTitle').textContent = 'Edit';
+    document.getElementById('saveButtonText').textContent = 'Update';
+    document.getElementById('formModal').classList.add('show');
+}
+
+function populateForm() {
+    document.getElementById('titleInput').value = formData.title;
+    document.getElementById('movieBtn').classList.toggle('active', formData.type === 'movie');
+    document.getElementById('tvBtn').classList.toggle('active', formData.type === 'tv');
+    document.getElementById('wantBtn').classList.remove('active','want');
+    document.getElementById('watchingBtn').classList.remove('active','watching');
+    document.getElementById('watchedBtn').classList.remove('active','watched');
+    if (formData.status === 'want-to-watch') document.getElementById('wantBtn').classList.add('active','want');
+    else if (formData.status === 'currently-watching') document.getElementById('watchingBtn').classList.add('active','watching');
+    else document.getElementById('watchedBtn').classList.add('active','watched');
+    document.getElementById('ratingSection').style.display = formData.status === 'watched' ? 'block' : 'none';
+    updateRatingStars();
+    document.getElementById('meBtn').classList.toggle('active', formData.audience && formData.audience.includes('me'));
+    document.getElementById('bothBtn').classList.toggle('active', formData.audience && formData.audience.includes('both'));
+    document.querySelectorAll('#genreTagsForm .tag-btn').forEach(b => {
+        b.classList.toggle('active', formData.genres && formData.genres.includes(b.dataset.genre));
+        b.classList.toggle('genre', formData.genres && formData.genres.includes(b.dataset.genre));
+    });
+    document.querySelectorAll('#serviceTagsForm .tag-btn').forEach(b => {
+        b.classList.toggle('active', formData.streamingServices && formData.streamingServices.includes(b.dataset.service));
+        b.classList.toggle('service', formData.streamingServices && formData.streamingServices.includes(b.dataset.service));
+    });
+    document.getElementById('notesInput').value = formData.description || '';
+}
+
+function setType(t) {
+    formData.type = t;
+    document.getElementById('movieBtn').classList.toggle('active', t === 'movie');
+    document.getElementById('tvBtn').classList.toggle('active', t === 'tv');
+}
+
+function setStatus(s) {
+    formData.status = s;
+    document.getElementById('wantBtn').classList.remove('active','want');
+    document.getElementById('watchingBtn').classList.remove('active','watching');
+    document.getElementById('watchedBtn').classList.remove('active','watched');
+    if (s === 'want-to-watch') document.getElementById('wantBtn').classList.add('active','want');
+    else if (s === 'currently-watching') document.getElementById('watchingBtn').classList.add('active','watching');
+    else document.getElementById('watchedBtn').classList.add('active','watched');
+    document.getElementById('ratingSection').style.display = s === 'watched' ? 'block' : 'none';
+    if (s !== 'watched') formData.rating = null;
+}
+
+function setRating(r) { formData.rating = r; updateRatingStars(); }
+
+function updateRatingStars() {
+    document.querySelectorAll('#ratingStars .star').forEach((s,i) => s.classList.toggle('filled', i < (formData.rating || 0)));
+}
+
+function toggleAudience(v) {
+    if (!formData.audience) formData.audience = [];
+    const i = formData.audience.indexOf(v);
+    if (i > -1) formData.audience.splice(i, 1);
+    else formData.audience.push(v);
+    if (formData.audience.length === 0) formData.audience = ['both'];
+    document.getElementById('meBtn').classList.toggle('active', formData.audience.includes('me'));
+    document.getElementById('bothBtn').classList.toggle('active', formData.audience.includes('both'));
+}
+
+function toggleFormTag(k, v) {
+    if (!formData[k]) formData[k] = [];
+    const i = formData[k].indexOf(v);
+    if (i > -1) formData[k].splice(i, 1);
+    else formData[k].push(v);
+    const sel = k === 'genres' ? `[data-genre="${v}"]` : `[data-service="${v}"]`;
+    const b = document.querySelector(sel);
+    b.classList.toggle('active', formData[k].includes(v));
+    b.classList.toggle(k === 'genres' ? 'genre' : 'service', formData[k].includes(v));
+}
+
+function saveItem() {
+    formData.title = document.getElementById('titleInput').value.trim();
+    formData.description = document.getElementById('notesInput').value;
+    if (!formData.title) { alert('Enter a title'); return; }
+    if (editingId) items = items.map(i => i.id === editingId ? {...i, ...formData} : i);
+    else items.unshift({...formData, id:Date.now(), dateAdded:new Date().toISOString(), rating: formData.status === 'watched' ? formData.rating : null});
+    saveData();
+    renderTable();
+    closeModal();
+}
+
+function closeModal() { document.getElementById('formModal').classList.remove('show'); }
+
+function openDeleteConfirm(id) {
+    itemToDelete = items.find(i => i.id === id);
+    if (!itemToDelete) return;
+    document.getElementById('deleteItemTitle').textContent = itemToDelete.title;
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+function confirmDelete() {
+    if (itemToDelete) { items = items.filter(i => i.id !== itemToDelete.id); saveData(); renderTable(); itemToDelete = null; }
+    document.getElementById('confirmModal').classList.remove('show');
+}
+
+function cancelDelete() { itemToDelete = null; document.getElementById('confirmModal').classList.remove('show'); }
+
+document.getElementById('formModal').addEventListener('click', e => { if (e.target.id === 'formModal') closeModal(); });
+
+init();
+
+    </script>
+</body>
+</html>
