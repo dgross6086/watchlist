@@ -23,8 +23,10 @@
         .btn-toggle { padding: 0.5rem 1rem; background: white; color: #374151; border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
         .btn-toggle.active { background: linear-gradient(to right, #1e3a8a, #0f766e); color: white; }
         select { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; }
-        .search-box { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: none; }
-        .search-input { width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; }
+        .search-box { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: none; position: relative; }
+        .search-input { width: 100%; padding: 0.5rem 2.5rem 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; }
+        .search-clear { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: #e5e7eb; border: none; border-radius: 50%; width: 1.5rem; height: 1.5rem; cursor: pointer; display: none; align-items: center; justify-content: center; color: #6b7280; font-size: 1rem; line-height: 1; }
+        .search-clear:hover { background: #d1d5db; }
         .filter-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; display: none; }
         .filter-selects { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
         .filter-selects select { flex: 1; min-width: 150px; font-size: 0.875rem; }
@@ -111,7 +113,8 @@
                 </select>
             </div>
             <div id="searchBox" class="search-box">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="renderTable()">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="handleSearchInput()">
+                <button id="searchClear" class="search-clear" onclick="clearSearch()">✕</button>
             </div>
             <div id="filterPanel" class="filter-panel">
                 <div class="filter-selects">
@@ -198,7 +201,7 @@ const SERVICES = ['Netflix','Hulu','Disney+','Amazon Prime','HBO Max','Apple TV+
 let items = [];
 let editingId = null;
 let itemToDelete = null;
-let sortBy = 'dateAdded-desc';
+let sortBy = 'title-asc';
 let filters = {status:'all',type:'all',audience:'all',genres:[],streamingService:'all'};
 let formData = {title:'',type:'movie',status:'want-to-watch',rating:null,audience:['both'],genres:[],streamingServices:[],description:''};
 
@@ -210,6 +213,7 @@ function init() {
     } else {
         items = JSON.parse(saved);
     }
+    document.getElementById('sortSelect').value = 'title-asc';
     initializeGenreButtons();
     initializeFormTags();
     initializeServiceFilter();
@@ -282,6 +286,22 @@ function toggleSearch() {
     const v = b.style.display !== 'none';
     b.style.display = v ? 'none' : 'block';
     btn.classList.toggle('active', !v);
+    if (!v) {
+        document.getElementById('searchInput').focus();
+    }
+}
+
+function handleSearchInput() {
+    const input = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('searchClear');
+    clearBtn.style.display = input.value ? 'flex' : 'none';
+    renderTable();
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchClear').style.display = 'none';
+    renderTable();
 }
 
 function toggleFilters() {
@@ -331,6 +351,7 @@ function clearFilters() {
     document.getElementById('audienceFilter').value = 'all';
     document.getElementById('serviceFilter').value = 'all';
     document.getElementById('searchInput').value = '';
+    document.getElementById('searchClear').style.display = 'none';
     updateGenreButtonStates();
     updateFilterCount();
     renderTable();
